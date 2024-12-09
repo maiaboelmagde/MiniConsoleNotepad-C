@@ -7,9 +7,6 @@
 #define ENTER 13
 #define ESC 27
 #define BACKSPACE 8
-#define SAVE 19 //ctrl+s
-
-
 
 
 #define EXTENDED -32
@@ -35,126 +32,72 @@ void resetColorat(int,int);
 void resetColor();
 void getCursorToStart(int,int);
 void moveCursor(int,int);
-void print_finaltxt(char*,int,int,int,int,int);
-void handleEXETENDEDkeys(char*,char**,int*,int);
-int calculateExtraSpaces(char*,char*,int);
+void print_finaltxt(char*,int,int,int,int,int); //string,number of chars,size of colored area, x of coor_startpoint, y of coor_startpoint
+void handleEXETENDEDkeys(char*,char**,int*,int);//string,pointer to curpos pointer,pointer to number of chars,num of chars in a line
+
 
 int main()
 {
-
-    FILE *file;
-    char filename[] = "doc.txt";
-    long fileSize;
-
-    file = fopen(filename, "r");
-    if (file == NULL) {
-        // If the file doesn't exist, create it with default content
-        printf("File '%s' does not exist. Creating a new file...\n", filename);
-
-
-        file = fopen(filename, "w");
-        if (file == NULL) {
-            perror("Error creating file");
-            return 1;
-        }
-        fclose(file);
-
-        // Re-open the file in read mode to proceed
-        file = fopen(filename, "r");
-        if (file == NULL) {
-            perror("Error opening newly created file");
-            return 1;
-        }
-    }
-
-
-    //determine file's size
-    fseek(file, 0, SEEK_END);
-    fileSize = ftell(file);
-    rewind(file);
-
-
-    long size =500;
+    int size =500;
     int line_size = 50;
 
-
     getSize(&size);
+    cleanConsole();
 
-    int lines_num =(size%line_size)?size/line_size+1:size/line_size;
-
-    size +=fileSize;
     char* string;
     string = malloc(size * sizeof(char));
-    if (string == NULL) {
-        perror("Memory allocation failed");
-        fclose(file);
-        return 1;
-    }
-    // Read the file content into the allocated memory
-    fread(string, sizeof(char), fileSize, file);
-    string[fileSize] = '\0';
-
-    int chars_count= fileSize;
+    int chars_count= 0;
     char ch;
     char* currPos;
-    currPos = string +fileSize;
+    currPos = string;
 
     //positioning variables
     int start_x =30,start_y=3;
-    int extraSpaces = 0; //appears as result of Enter keys
 
     do{
-        extraSpaces = calculateExtraSpaces(string, currPos, line_size);
-        int curX = ((currPos - string + extraSpaces) % line_size) + start_x;
-        int curline = ((currPos - string + extraSpaces) / line_size) + start_y;
-
-        print_finaltxt(string,chars_count,line_size,start_x,start_y,lines_num);
-        moveCursor(curX, curline);
-
+        int curX = (currPos-string)%line_size +start_x;
+        int curline = (currPos-string)/line_size + start_y;
+        print_finaltxt(string,chars_count,line_size,start_x,start_y,size/line_size);
+        moveCursor(curX,curline);
         ch = getch();
         cleanConsole();
+        if(ch == EXTENDED){
+            handleEXETENDEDkeys(string,&currPos,&chars_count,line_size);
 
-        if(ch == SAVE ){
-            file = fopen(filename, "w");
-            if (file == NULL) {
-                perror("Error opening file for writing");
-                free(string);
-                return 1;
-            }
-            fwrite(string, sizeof(char), strlen(string), file);
-            fclose(file);
-            printf("File updated successfully!\n");
-        }else if(ch == EXTENDED){
-            handleEXETENDEDkeys(string, &currPos, &chars_count, line_size);
         }else if(ch == BACKSPACE){
-            if (currPos > string) {
-                for (int i = currPos - string; i < chars_count; i++) {
-                    string[i - 1] = string[i];
+            if(currPos == string){
+                printf("There's nothing before cursor to delete");
+            }else{
+                for(int i=chars_count;i>currPos-string;i--){
+                    string[i+1]=string[i];
                 }
                 chars_count--;
                 currPos--;
-            } else {
-                printf("No characters to delete before the cursor!");
             }
-        }else if(ch!= ESC && chars_count<size - 2){
-            for (int i = chars_count; i > currPos - string; i--) {
-                string[i] = string[i - 1];
+        }else if(ch!= TAB && chars_count<size - 2){
+            if(currPos-string < chars_count){
+                for(int i=chars_count;i>currPos-string;i--){
+                    *(string+i)= *(string+i-1);
+                }
+                *(currPos)=ch;
+                currPos++;
+                chars_count++;
+            }else{
+                *(currPos) = ch;
+                currPos++;
+                chars_count++;
             }
-            *currPos = ch;
-            currPos++;
-            chars_count++;
         }else if (chars_count>= size - 2){
             printf("You reached to maximum allowed number of chars \n");
         }
-    }while(ch!= ESC);
+
+    }while(ch!= TAB);
     cleanConsole();
     printf("your final message is : ");
-    print_finaltxt(string, chars_count, line_size, start_x, start_y, lines_num);
-    extraSpaces = calculateExtraSpaces(string, currPos, line_size);
-    resetColorat(0 ,start_y + (size / line_size) + (extraSpaces / line_size));
+    print_finaltxt(string,chars_count,line_size,start_x,start_y,size/line_size);
+    resetColorat(0,start_y+(size/line_size));
 
 
-    free(string);
     return 0;
 }
 
@@ -250,45 +193,24 @@ void moveCursor(int x,int y){
  * print_finaltxt - displays the text with formatting (e.g., background color).
  * @string: pointer to the text to display.
  * @charsCount: number of characters in the text.
- * @line_size: maximum number of characters allowed in one line.
+ * @size: maximum number of characters allowed in one line.
  * @start_x: X-coordinate of the starting point.
  * @start_y: Y-coordinate of the starting point.
  * @lines: number of lines for the colored area.
- * =
  */
-void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int start_y,int lines){
+void print_finaltxt(char* string,int charsCount,int size,int start_x,int start_y,int lines){
     color_space(start_x,start_y);
     int curLine = 0;
-    int BreaksHandler = 0;
-    for(int i=0;i<charsCount;i++,BreaksHandler++){
+    for(int i=0;i<charsCount;i++){
         //printf("i = %d , size = %d",i,size);
-        if(BreaksHandler%line_size == 0 && BreaksHandler>0){
+        if(i%size == 0 && i>0){
             curLine++;
             color_space(start_x,start_y+curLine);
         }
-        printf("%c",*(string+ i));
-
-        int temp =BreaksHandler+1;
-        while(*(string+i+1) == ENTER){
-            while(temp % line_size != 0){
-                if(temp == 1){
-                    printf(" ");
-                    BreaksHandler++;
-                }
-                printf("d");
-                BreaksHandler++;
-                temp++;
-            }
-            if(*(string+i+2) == ENTER){ //ensure there is Enter -> otherwise,it will goto newline already
-            curLine++;
-            color_space(start_x,start_y+curLine);
-            }
-            i++;
-            temp = 1;
-        }
+        printf("%c",*(string+i));
     }
-    for(;BreaksHandler%line_size !=0 ||(BreaksHandler%line_size ==0  && BreaksHandler < line_size*lines);BreaksHandler++){
-        if(BreaksHandler%(line_size) == 0 && BreaksHandler>0){
+    for(int i = charsCount;i<size*lines;i++){
+        if(i%(size) == 0 && i>0){
             curLine++;
             color_space(start_x,start_y+curLine);
         }
@@ -297,14 +219,13 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
     //printing empty line
     curLine++;
     moveCursor(start_x,start_y+curLine);
-    for(int i = 0;i<line_size;i++){
+    for(int i = 0;i<size;i++){
         printf(" ");
-        if(i%line_size == 0 && i>0){
+        if(i%size == 0 && i>0){
             curLine++;
             color_space(start_x,start_y+curLine);
         }
     }
-
     resetColor();
 }
 /**
@@ -365,25 +286,6 @@ void handleEXETENDEDkeys(char* str,char** curPOs,int* charsCount,int size){
             break;
 
     }
-}
-
-int calculateExtraSpaces(char* string, char* curPos, int line_size) {
-    int spacesCount = 0, multEnterFlag = 0,EnterCount = 0;;
-    for (int i = 0; &string[i] < curPos; i++) {
-        if (string[i] == ENTER) {
-            if (multEnterFlag == 1) {
-                spacesCount += line_size;
-            } else {
-                if ((i-EnterCount+spacesCount) % line_size != 0) {
-                    spacesCount += line_size - ((i-EnterCount+spacesCount) % line_size);
-                }
-            }
-            multEnterFlag = 1;
-        } else {
-            multEnterFlag = 0;
-        }
-    }
-    return spacesCount-EnterCount;
 }
 
 
