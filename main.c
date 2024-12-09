@@ -20,7 +20,7 @@
 #define RIGHT 77
 #define END 79
 #define DOWN 80
-#define DELETE 83
+#define DELETEKEY 83
 
 
 
@@ -151,7 +151,7 @@ int main()
     printf("your final message is : ");
     print_finaltxt(string, chars_count, line_size, start_x, start_y, lines_num);
     extraSpaces = calculateExtraSpaces(string, currPos, line_size);
-    resetColorat(0 ,start_y + (size / line_size) + (extraSpaces / line_size));
+    resetColorat(0 ,start_y + (size / line_size) + (extraSpaces / line_size)+3);
 
 
     free(string);
@@ -261,7 +261,14 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
     int curLine = 0;
     int BreaksHandler = 0;
     for(int i=0;i<charsCount;i++,BreaksHandler++){
-        //printf("i = %d , size = %d",i,size);
+        if(i == 0 && *string == ENTER){
+            moveCursor(start_x,start_y+curLine);
+            for(int j = 0;j<line_size;j++,BreaksHandler++){
+                printf(" ");
+            }
+            BreaksHandler--;
+        }
+
         if(BreaksHandler%line_size == 0 && BreaksHandler>0){
             curLine++;
             color_space(start_x,start_y+curLine);
@@ -272,7 +279,7 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
         while(*(string+i+1) == ENTER){
             while(temp % line_size != 0){
                 if(temp == 1){
-                    printf(" ");
+                    printf("d");
                     BreaksHandler++;
                 }
                 printf("d");
@@ -332,7 +339,7 @@ void handleEXETENDEDkeys(char* str,char** curPOs,int* charsCount,int size){
             (*curPOs)--;
             printf(" The cursor point to : %c",**curPOs);
             break;
-        case DELETE:
+        case DELETEKEY:
             if(*charsCount == 0 || (*(curPOs)-str)==*charsCount){
                 printf("No chars after cursor to delete !!!");
                 break;
@@ -371,6 +378,7 @@ int calculateExtraSpaces(char* string, char* curPos, int line_size) {
     int spacesCount = 0, multEnterFlag = 0,EnterCount = 0;;
     for (int i = 0; &string[i] < curPos; i++) {
         if (string[i] == ENTER) {
+            EnterCount++;
             if (multEnterFlag == 1) {
                 spacesCount += line_size;
             } else {
@@ -383,7 +391,7 @@ int calculateExtraSpaces(char* string, char* curPos, int line_size) {
             multEnterFlag = 0;
         }
     }
-    return spacesCount-EnterCount;
+    return (EnterCount)?spacesCount-EnterCount-1:0;
 }
 
 
