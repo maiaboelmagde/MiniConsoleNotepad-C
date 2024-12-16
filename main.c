@@ -151,7 +151,7 @@ int main()
     printf("your final message is : ");
     print_finaltxt(string, chars_count, line_size, start_x, start_y, lines_num);
     extraSpaces = calculateExtraSpaces(string, currPos, line_size);
-    resetColorat(0 ,start_y + (size / line_size) + (extraSpaces / line_size)+3);
+    resetColorat(0 ,start_y + (size / line_size) + (extraSpaces / line_size)+20);
 
 
     free(string);
@@ -279,10 +279,10 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
         while(*(string+i+1) == ENTER){
             while(temp % line_size != 0){
                 if(temp == 1){
-                    printf("d");
+                    printf(" ");
                     BreaksHandler++;
                 }
-                printf("d");
+                printf(" ");
                 BreaksHandler++;
                 temp++;
             }
@@ -313,6 +313,9 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
     }
 
     resetColor();
+
+    displayInstructions(start_x, start_y+curLine+5);
+
 }
 /**
  * handleEXETENDEDkeys - handles extended keyboard keys (e.g., arrow keys).
@@ -322,6 +325,7 @@ void print_finaltxt(char* string,int charsCount,int line_size,int start_x,int st
  * @size: maximum number of characters per line.
  */
 void handleEXETENDEDkeys(char* str,char** curPOs,int* charsCount,int size){
+    int extraSpaces=0;
     char ch = getch();
     switch(ch){
         case RIGHT:
@@ -357,15 +361,20 @@ void handleEXETENDEDkeys(char* str,char** curPOs,int* charsCount,int size){
             *curPOs = str;
             break;
         case DOWN:
-            if(*curPOs+size < str+*charsCount){
-                *curPOs+=size;
+            if(*curPOs+size<=charsCount){
+            extraSpaces = calculateExtraSpaces(str,*curPOs+size,size);
+            }
+            if(*curPOs+size < str+*charsCount+extraSpaces){
+                *curPOs+=size-extraSpaces;
             }else{
                 printf("No more lines below!");
             }
             break;
         case UP:
-            if(*curPOs-size > str){
-                *curPOs-=size;
+            extraSpaces = calculateExtraSpaces(str,*curPOs,size);
+            if(*curPOs-(size -extraSpaces) > str){
+
+                *curPOs-= size-extraSpaces;
             }else{
                 printf("No more lines above!");
             }
@@ -374,6 +383,16 @@ void handleEXETENDEDkeys(char* str,char** curPOs,int* charsCount,int size){
     }
 }
 
+/**
+ * calculateExtraSpaces - calculates the additional spaces added to align text correctly
+ *                        when Enter (newline) characters are encountered.
+ * @string: pointer to the text buffer containing the input text.
+ * @curPos: pointer to the current cursor position within the text buffer.
+ * @line_size: the maximum number of characters allowed in one line.
+ *
+ * Return:
+ * - The total number of extra spaces needed to handle Enter keys in the text.
+ */
 int calculateExtraSpaces(char* string, char* curPos, int line_size) {
     int spacesCount = 0, multEnterFlag = 0,EnterCount = 0;;
     for (int i = 0; &string[i] < curPos; i++) {
@@ -393,6 +412,37 @@ int calculateExtraSpaces(char* string, char* curPos, int line_size) {
     }
     return (EnterCount)?spacesCount-EnterCount-1:0;
 }
+
+/**
+ * displayInstructions - displays instructions on how to use the program.
+ * @start_x: X-coordinate for starting position.
+ * @start_y: Y-coordinate for starting position.
+ */
+void displayInstructions(int start_x, int start_y) {
+    gotoxy(start_x, start_y);
+    printf("=== Instructions ===");
+    gotoxy(start_x, start_y + 1);
+    printf("1. Use arrow keys to navigate:");
+    gotoxy(start_x, start_y + 2);
+    printf("   - UP and DOWN to move between lines.");
+    gotoxy(start_x, start_y + 3);
+    printf("   - LEFT and RIGHT to move horizontally.");
+    gotoxy(start_x, start_y + 4);
+    printf("2. Press END to move to the end of your text.");
+    gotoxy(start_x, start_y + 5);
+    printf("3. Press HOME to move to the start of your text.");
+    gotoxy(start_x, start_y + 6);
+    printf("4. Use BACKSPACE to delete characters before the cursor.");
+    gotoxy(start_x, start_y + 7);
+    printf("5. Use DEL to delete characters after the cursor.");
+    gotoxy(start_x, start_y + 8);
+    printf("6. Press CTRL + S to save your text.");
+    gotoxy(start_x, start_y + 9);
+    printf("7.. Press ESC to exit the program.");
+    gotoxy(start_x, start_y + 10);
+    printf("====================");
+}
+
 
 
 
